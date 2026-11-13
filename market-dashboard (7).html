@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แดชบอร์ดกราฟตลาดโลก</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.0/dist/lightweight-charts.standalone.production.js"></script>
+<script>window.LightweightCharts||document.write('<script src="https://unpkg.com/lightweight-charts@5.0.0/dist/lightweight-charts.standalone.production.js"><\/script>')</script>
+<style>
+  :root{--bg:#0e1116;--panel:#151a21;--line:#252c36;--ink:#e6e9ee;--muted:#8b95a3;--up:#26a69a;--down:#ef5350;--accent:#f0b429;--chip:#1c232c}
+  [data-theme=light]{--bg:#f2f4f7;--panel:#ffffff;--line:#d8dde5;--ink:#161b22;--muted:#5c6673;--chip:#eef1f5}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Thai",system-ui,sans-serif;padding:8px;display:flex;flex-direction:column;gap:8px;height:100dvh;overflow:hidden}
+  h1{font-size:16px;font-weight:600;margin:0;margin-right:auto;white-space:nowrap}
+  .bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;flex:none}
+  .grp{display:flex;align-items:center;gap:6px}
+  .lbl{font-size:12px;color:var(--muted)}
+  button,select,input[type=number],summary{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 10px}
+  button,select,summary{cursor:pointer}
+  button:hover,select:hover,summary:hover{border-color:var(--muted)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button.primary{background:var(--accent);color:#1a1405;border-color:var(--accent);font-weight:600}
+  .seg{display:flex}
+  .seg button{border-radius:0;margin-left:-1px}
+  .seg button:first-child{border-radius:6px 0 0 6px;margin-left:0}
+  .seg button:last-child{border-radius:0 6px 6px 0}
+  .seg button.on{background:var(--accent);color:#1a1405;border-color:var(--accent);position:relative;font-weight:600}
+  input[type=number]{width:60px;padding:4px 6px}
+
+  /* เมนูแบบพับเก็บ */
+  details.dd{position:relative}
+  details.dd>summary{list-style:none;user-select:none;white-space:nowrap}
+  details.dd>summary::-webkit-details-marker{display:none}
+  details.dd>summary::after{content:"▾";margin-left:6px;color:var(--muted);font-size:11px}
+  details.dd[open]>summary{border-color:var(--accent)}
+  .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:60;min-width:250px;max-width:calc(100vw - 16px);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:9px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .menu.left{right:auto;left:0}
+  .menu .row{display:flex;align-items:center;gap:8px;justify-content:space-between}
+  .menu .row select{flex:1;min-width:0}
+  .menu button{text-align:left}
+  .menu p{margin:0;font-size:12px;color:var(--muted);line-height:1.6}
+  .menu h4{margin:2px 0 0;font-size:11.5px;font-weight:500;color:var(--muted)}
+  .ind{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer}
+  .ind b{font-weight:600;min-width:34px}
+  .ind input[type=number]{margin-left:auto}
+  .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px}
+
+  /* ตารางกราฟ: เต็มพื้นที่จอที่เหลือ */
+  #grid{flex:1;min-height:0;display:grid;gap:8px}
+  #grid.n1{grid-template:1fr/1fr}
+  #grid.n2{grid-template:1fr/1fr 1fr}
+  #grid.n4{grid-template:1fr 1fr/1fr 1fr}
+  #grid.n6{grid-template:1fr 1fr/repeat(3,1fr)}
+  @media (orientation:portrait),(max-width:900px){
+    #grid.n2{grid-template:1fr 1fr/1fr}
+    #grid.n6{grid-template:repeat(3,1fr)/1fr 1fr}
+  }
+  @media (max-width:640px){
+    body{height:auto;min-height:100dvh;overflow:auto}
+    #grid.n1{min-height:calc(100dvh - 110px)}
+    #grid.n2,#grid.n4,#grid.n6{grid-template:none;grid-template-columns:1fr;grid-auto-rows:46dvh}
+    .menu{position:fixed;left:8px;right:8px;top:auto;margin-top:6px}
+    .sym{display:none}
+  }
+  .panel{container-type:inline-size;background:var(--panel);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+  .panel:fullscreen{border:0;border-radius:0;width:100vw;height:100vh}
+  .panel.max{position:fixed;inset:0;z-index:100;border:0;border-radius:0}
+  .ph{display:flex;align-items:center;gap:4px 8px;padding:5px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap;flex:none}
+  .ph select.asset{font-weight:600;font-size:13.5px;padding:3px 6px;max-width:210px}
+  .name{font-weight:600;font-size:14px}
+  .sym{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
+  .price{font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;margin-left:auto}
+  .chg{font-variant-numeric:tabular-nums;font-size:12.5px}
+  .up{color:var(--up)}.down{color:var(--down)}
+  .tools{display:flex;gap:4px}
+  .tools button{padding:3px 6px;font-size:11.5px;display:flex;align-items:center;gap:4px;line-height:1}
+  .tools svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+  .tools button[data-act=fs]{border-color:var(--accent);color:var(--accent)}
+  @container (max-width:600px){.tools span{display:none}.ph select.asset{max-width:150px}}
+  @container (max-width:470px){.ph .sym{display:none}}
+  .chart{position:relative;flex:1;min-height:0}
+  .status{position:absolute;left:10px;top:6px;z-index:5;font-size:11px;color:var(--muted);background:color-mix(in srgb,var(--panel) 80%,transparent);padding:2px 6px;border-radius:4px;pointer-events:none;max-width:90%}
+  .status.err{color:var(--down)}
+  .legend~.status{top:auto;bottom:34px}
+  .live{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--up);margin-right:5px}
+  .legend{position:absolute;left:10px;top:8px;z-index:5;font-size:12.5px;background:color-mix(in srgb,var(--panel) 85%,transparent);padding:6px 9px;border-radius:6px;border:1px solid var(--line);font-variant-numeric:tabular-nums;pointer-events:none}
+  .legend:empty{display:none}
+  .legend div{display:flex;gap:8px;align-items:center;line-height:1.7}
+  .legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+  .legend span.v{margin-left:auto;padding-left:14px;font-weight:600}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1>แดชบอร์ดกราฟตลาดโลก</h1>
+  <div class="grp"><span class="lbl">จำนวนกราฟ</span>
+    <div class="seg" id="laySeg" role="group" aria-label="จำนวนกราฟบนหน้าจอ"><button data-n="1">1</button><button data-n="2">2</button><button data-n="4">4</button><button data-n="6">6</button></div>
+  </div>
+  <div class="grp"><span class="lbl">กรอบเวลา</span>
+    <div class="seg" id="tfSeg" role="group" aria-label="กรอบเวลา"><button data-tf="5m">5 นาที</button><button data-tf="15m">15 นาที</button><button data-tf="1h">1 ชม.</button><button data-tf="1d">1 วัน</button></div>
+  </div>
+
+  <details class="dd"><summary>การแสดงผล</summary>
+    <div class="menu">
+      <h4>มุมมอง</h4>
+      <div class="seg" id="modeSeg"><button data-mode="split">แยกกราฟ</button><button data-mode="cmp">เทียบ % ในกราฟเดียว</button></div>
+      <div class="row"><span class="lbl">รูปแบบกราฟ</span><select id="type"><option value="candle">แท่งเทียน</option><option value="bar">แท่ง OHLC</option><option value="line">เส้น</option><option value="area">พื้นที่</option></select></div>
+      <div class="row"><span class="lbl">ธีม</span><select id="theme"><option value="dark">ธีมมืด</option><option value="light">ธีมสว่าง</option></select></div>
+      <label class="ind"><input type="checkbox" id="auto"> อัปเดตอัตโนมัติ</label>
+    </div>
+  </details>
+
+  <details class="dd"><summary>อินดิเคเตอร์</summary>
+    <div class="menu">
+      <label class="ind"><input type="checkbox" id="ma"><b style="color:#f0b429">MA</b><span class="lbl">ค่าเฉลี่ย</span><input type="number" id="maN" min="2" max="200"></label>
+      <label class="ind"><input type="checkbox" id="ema"><b style="color:#4aa3ff">EMA</b><span class="lbl">ค่าเฉลี่ยถ่วงน้ำหนัก</span><input type="number" id="emaN" min="2" max="200"></label>
+      <label class="ind"><input type="checkbox" id="rsi"><b style="color:#b28dff">RSI</b><span class="lbl">แรงซื้อ-ขาย</span><input type="number" id="rsiN" min="2" max="100"></label>
+    </div>
+  </details>
+
+  <details class="dd"><summary>ดาวน์โหลด PNG</summary>
+    <div class="menu">
+      <button id="pngOne" class="primary">รวมทุกกราฟในไฟล์เดียว</button>
+      <button id="pngEach">ทุกกราฟ แยกไฟล์ละกราฟ</button>
+      <p>ดาวน์โหลดเฉพาะกราฟเดียว: กดปุ่ม PNG ที่มุมขวาบนของกราฟนั้น</p>
+    </div>
+  </details>
+
+  <button id="refreshAll" title="โหลดข้อมูลทุกกราฟใหม่">อัปเดต</button>
+  <button id="pageFS" title="ขยายทั้งหน้าให้เต็มจอ">เต็มจอ</button>
+
+  <details class="dd"><summary aria-label="วิธีใช้">วิธีใช้</summary>
+    <div class="menu" style="min-width:300px">
+      <p>เลือกสินทรัพย์ของแต่ละช่องจากรายการที่หัวกราฟ · ปุ่มมุมขวาของกราฟ: อัปเดต, รีเซ็ตซูม, PNG, ขยายเต็มจอ/ย่อกลับ (หรือกด Esc)</p>
+      <p>เลื่อนกราฟ: ลากเมาส์ · ซูม: ล้อเมาส์หรือบีบนิ้ว · ลากที่แกนราคา/เวลาเพื่อยืด-หด · ดับเบิลคลิกที่แกนเพื่อรีเซ็ต</p>
+      <p>ข้อมูลดึงจากแหล่งสาธารณะที่ไม่ต้องใช้ API key โดยลองทีละแหล่งจนกว่าจะได้ (ชื่อแหล่งแสดงข้างชื่อกราฟ) หุ้นต่างประเทศบางตัวแสดงผ่าน ETF หรือสัญญา perp ที่ติดตามดัชนี ตัวเลขจึงอาจไม่ตรงกับค่าดัชนีโดยตรง · ข้อมูลอาจล่าช้า ใช้ดูภาพรวม ไม่ใช่คำแนะนำการลงทุน</p>
+    </div>
+  </details>
+</header>
+
+<main id="grid"></main>
+
+<script>
+/* ================= แคตตาล็อกสินทรัพย์ =================
+   แต่ละสินทรัพย์มีแหล่งข้อมูลหลายชั้น ลองตามลำดับจนกว่าจะได้ข้อมูล (ไม่ต้องใช้ API key ทุกแหล่ง)
+   bn = Binance (f:1 ฟิวเจอร์ส, f:0 spot, h = โฮสต์อื่นเช่น Binance TH)
+   kr = Kraken   hl = Hyperliquid (ตลาด HIP-3)   bk = Bitkub
+   yh = Yahoo Finance (ผ่าน CORS proxy หลายตัวพร้อมกัน)   fr = ECB/Frankfurter (รายวัน) */
+const GROUPS = {cmd:'สินค้าโภคภัณฑ์ & คริปโต', us:'หุ้นสหรัฐ', world:'หุ้นโลก', fx:'ค่าเงิน'};
+const CAT = [
+  {id:'oil',  g:'cmd', name:'น้ำมันดิบ WTI', short:'WTI', unit:'USD/บาร์เรล', bn:[{f:1,s:'CLUSDT'}], hl:['xyz:CL','xyz:WTIOIL'], yh:'CL=F'},
+  {id:'brent',g:'cmd', name:'น้ำมันเบรนท์',  short:'Brent', unit:'USD/บาร์เรล', bn:[{f:1,s:'BZUSDT'}], hl:['xyz:BRENTOIL'], yh:'BZ=F'},
+  {id:'gold', g:'cmd', name:'ทองคำ', short:'ทอง', unit:'USD/ออนซ์', bn:[{f:1,s:'XAUUSDT'},{f:0,s:'PAXGUSDT'}], kr:'PAXGUSD', hl:['xyz:GOLD'], yh:'GC=F'},
+  {id:'silver',g:'cmd',name:'เงิน (Silver)', short:'เงิน', unit:'USD/ออนซ์', bn:[{f:1,s:'XAGUSDT'}], hl:['xyz:SILVER'], yh:'SI=F'},
+  {id:'btc',  g:'cmd', name:'บิตคอยน์', short:'BTC', unit:'USD', bn:[{f:0,s:'BTCUSDT'},{f:1,s:'BTCUSDT'}], kr:'XBTUSD', hl:['BTC'], yh:'BTC-USD'},
+  {id:'spx', ord:'hl yh bn',  g:'us',  name:'S&P 500', short:'S&P500', unit:'USD', bn:[{f:1,s:'SPYUSDT'}], hl:['xyz:SP500'], yh:'^GSPC'},
+  {id:'ndx', ord:'yh hl bn',  g:'us',  name:'Nasdaq 100', short:'Nasdaq', unit:'USD', bn:[{f:1,s:'QQQUSDT'}], hl:['xyz:XYZ100'], yh:'^NDX'},
+  {id:'dji', ord:'yh bn',  g:'us',  name:'Dow Jones', short:'Dow', unit:'USD', bn:[{f:1,s:'DIAUSDT'}], yh:'^DJI'},
+  {id:'uk', ord:'yh bn',   g:'world',name:'หุ้นอังกฤษ (FTSE 100)', short:'อังกฤษ', unit:'USD', bn:[{f:1,s:'EWUUSDT'}], yh:'^FTSE'},
+  {id:'de', ord:'yh bn',   g:'world',name:'หุ้นเยอรมัน (DAX)', short:'เยอรมัน', unit:'USD', bn:[{f:1,s:'EWGUSDT'}], yh:'^GDAXI'},
+  {id:'fr', ord:'yh bn',   g:'world',name:'หุ้นฝรั่งเศส (CAC 40)', short:'ฝรั่งเศส', unit:'USD', bn:[{f:1,s:'EWQUSDT'}], yh:'^FCHI'},
+  {id:'cn', ord:'yh bn',   g:'world',name:'หุ้นจีน', short:'จีน', unit:'USD', bn:[{f:1,s:'FXIUSDT'},{f:1,s:'MCHIUSDT'},{f:1,s:'ASHRUSDT'}], yh:'000001.SS'},
+  {id:'jp', ord:'yh hl bn',   g:'world',name:'หุ้นญี่ปุ่น (Nikkei)', short:'ญี่ปุ่น', unit:'USD', bn:[{f:1,s:'EWJUSDT'}], hl:['xyz:JP225'], yh:'^N225'},
+  {id:'kr', ord:'yh hl bn',   g:'world',name:'หุ้นเกาหลีใต้ (KOSPI)', short:'เกาหลีใต้', unit:'USD', bn:[{f:1,s:'EWYUSDT'}], hl:['xyz:KR200'], yh:'^KS11'},
+  {id:'eur',  g:'fx',  name:'ยูโร / ดอลลาร์ (EUR/USD)', short:'EUR/USD', unit:'USD ต่อ 1 EUR', kr:'EURUSD', hl:['xyz:EUR'], yh:'EURUSD=X', fr:{b:'EUR',s:'USD'}},
+  {id:'gbp',  g:'fx',  name:'ปอนด์ / ดอลลาร์ (GBP/USD)', short:'GBP/USD', unit:'USD ต่อ 1 GBP', kr:'GBPUSD', hl:['xyz:GBP'], yh:'GBPUSD=X', fr:{b:'GBP',s:'USD'}},
+  {id:'jpy',  g:'fx',  name:'ดอลลาร์ / เยน (USD/JPY)', short:'USD/JPY', unit:'เยนต่อ 1 USD', kr:'USDJPY', hl:['xyz:JPY'], yh:'JPY=X', fr:{b:'USD',s:'JPY'}},
+  {id:'cny',  g:'fx',  name:'ดอลลาร์ / หยวน (USD/CNY)', short:'USD/CNY', unit:'หยวนต่อ 1 USD', yh:'CNY=X', fr:{b:'USD',s:'CNY'}},
+  {id:'thb',  g:'fx',  name:'ดอลลาร์ / บาท (USD/THB)', short:'USD/THB', unit:'บาทต่อ 1 USD', bn:[{f:0,s:'USDTTHB'},{f:0,s:'USDTTHB',h:'https://api.binance.th/api/v1/klines',tag:'Binance TH'}], bk:'USDT_THB', yh:'THB=X', fr:{b:'USD',s:'THB'}},
+];
+const BY = Object.fromEntries(CAT.map(a=>[a.id,a]));
+
+const TF = {
+  '5m': {yi:'5m', yr:'5d', bi:'5m', kr:5,   bk:'5',  ms:3e5},
+  '15m':{yi:'15m',yr:'1mo',bi:'15m',kr:15,  bk:'15', ms:9e5},
+  '1h': {yi:'60m',yr:'3mo',bi:'1h', kr:60,  bk:'60', ms:36e5},
+  '1d': {yi:'1d', yr:'1y', bi:'1d', kr:1440,bk:'1D', ms:864e5},
+};
+const THEME = {
+  dark: {bg:'#151a21', page:'#0e1116', text:'#aab3c0', grid:'#1e242d', border:'#252c36', ink:'#e6e9ee'},
+  light:{bg:'#ffffff', page:'#f2f4f7', text:'#4a5563', grid:'#eef1f5', border:'#d8dde5', ink:'#161b22'},
+};
+const PALETTE = ['#f0b429','#4aa3ff','#ef5350','#26a69a','#b28dff','#ff8fab','#7bd88f','#ffa94d','#66d9e8','#c0a16b','#a3a3ff','#e599f7','#94d82d','#ff6b6b','#20c997','#fcc419','#74c0fc','#d0bfff','#ffd8a8'];
+const COLOR = Object.fromEntries(CAT.map((a,i)=>[a.id,PALETTE[i%PALETTE.length]]));
+const UP='#26a69a', DOWN='#ef5350';
+const COLS = {1:1,2:2,4:2,6:3};
+const TITLE = 'แดชบอร์ดกราฟตลาดโลก';
+
+/* ================= สถานะ ================= */
+const DEF = {tf:'15m',type:'candle',theme:'dark',mode:'split',layout:4,
+             slots:['btc','gold','oil','spx','ndx','dji'], cmp:['btc','gold','oil','spx'],
+             ma:true,maN:20,ema:false,emaN:50,rsi:false,rsiN:14,auto:true};
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} },
+};
+let S = {...DEF};
+{
+  const old = store.get('mkt-dash-v3')||store.get('mkt-dash'), cur = store.get('mkt-dash-v4');
+  if(cur) Object.assign(S,cur);
+  else if(old){ // คงค่าธีม/อินดิเคเตอร์จากเวอร์ชันก่อน แต่ใช้ชุดกราฟเริ่มต้นใหม่
+    ['tf','type','theme','ma','maN','ema','emaN','rsi','rsiN','auto'].forEach(k=>{ if(k in old) S[k]=old[k]; });
+  }
+  S.slots = [...(Array.isArray(S.slots)?S.slots:[]),...DEF.slots].filter(id=>BY[id]).slice(0,6);
+  S.cmp = (Array.isArray(S.cmp)?S.cmp:DEF.cmp).filter(id=>BY[id]);
+  if(!COLS[S.layout]) S.layout=4;
+  if(!TF[S.tf]) S.tf='15m';
+  if(!THEME[S.theme]) S.theme='dark';
+  if(S.mode!=='cmp') S.mode='split';
+}
+const save = ()=>store.set('mkt-dash-v4',S);
+const PREF = store.get('mkt-dash-src3')||{};   // id -> แหล่งข้อมูลที่ใช้ได้ล่าสุด (ลองก่อนในครั้งถัดไป)
+
+const DATA = {};      // id -> {data, live, via, unit, at, tf}
+const ERR  = {};      // id -> {msg, at}
+const LOADING = {};   // id -> promise
+let P = [];           // แผงกราฟตามช่อง (โหมดแยกกราฟ)
+let CMP = null;       // กราฟโหมดเทียบ
+const WS = {};        // id -> {ws, key}
+const BAD = new Set();// แหล่งที่ยืนยันแล้วว่าไม่มีสัญลักษณ์นั้น
+const LW = window.LightweightCharts;
+const $ = s=>document.querySelector(s);
+const fmt = n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:n<10?4:2});
+const shift = t=>t - new Date().getTimezoneOffset()*60;   // แสดงเป็นเวลาท้องถิ่น
+const activeIds = ()=> S.mode==='cmp' ? CAT.map(a=>a.id).filter(id=>S.cmp.includes(id)) : [...new Set(S.slots.slice(0,S.layout))];
+
+/* ================= ดึงข้อมูล ================= */
+async function getJSON(url, timeout=7000, init){
+  const ctl = new AbortController(), t = setTimeout(()=>ctl.abort(), timeout);
+  try{
+    const r = await fetch(url,{signal:ctl.signal,cache:'no-store',...init});
+    if(!r.ok){ const e=new Error('HTTP '+r.status); e.status=r.status; throw e; }
+    return init&&init.text ? await r.text() : await r.json();
+  }catch(e){ if(e.name==='AbortError') throw new Error('หมดเวลา'); throw e; }
+  finally{ clearTimeout(t); }
+}
+/* ทำความสะอาดข้อมูล: ตัดแท่งที่ค่าว่าง เรียงเวลา และตัดเวลาซ้ำ (สาเหตุหนึ่งที่ทำให้กราฟไม่ขึ้น) */
+function normalize(rows){
+  const m = new Map();
+  for(const b of rows){
+    const o=+b.open, c=+b.close;
+    if(!Number.isFinite(b.time)||!Number.isFinite(o)||!Number.isFinite(c)||b.open==null||b.close==null) continue;
+    let h=+b.high, l=+b.low;
+    if(b.high==null||!Number.isFinite(h)) h=Math.max(o,c);
+    if(b.low==null||!Number.isFinite(l))  l=Math.min(o,c);
+    m.set(b.time,{time:b.time,open:o,high:Math.max(h,o,c),low:Math.min(l,o,c),close:c});
+  }
+  const out=[...m.values()].sort((a,b)=>a.time-b.time);
+  if(out.length<2) throw new Error('ไม่มีข้อมูล');
+  return out;
+}
+const REST = {1:['https://fapi.binance.com/fapi/v1/klines'], 0:['https://api.binance.com/api/v3/klines','https://data-api.binance.vision/api/v3/klines']};
+const WSS  = {1:'wss://fstream.binance.com/ws/', 0:'wss://stream.binance.com:9443/ws/'};
+
+const BN_DOWN = {};   // โฮสต์ Binance ที่เรียกไม่ได้จากเบราว์เซอร์นี้ (ข้ามไป 10 นาที)
+async function fromBinance(src, tf){
+  const hosts = src.h ? [src.h] : REST[src.f]; let err;
+  for(const h of hosts){
+    if(Date.now()-(BN_DOWN[h]||0)<6e5){ err=err||new Error('เบราว์เซอร์นี้เข้าถึงไม่ได้'); continue; }
+    try{
+      const j = await getJSON(`${h}?symbol=${src.s}&interval=${TF[tf].bi}&limit=500`, 6000);
+      if(!Array.isArray(j)||!j.length) throw new Error('ไม่มีข้อมูล');
+      return j.map(k=>({time:shift(k[0]/1000),open:k[1],high:k[2],low:k[3],close:k[4]}));
+    }catch(e){ err=e; if(e.status===400) break; if(!e.status) BN_DOWN[h]=Date.now(); }
+  }
+  throw err;
+}
+async function fromKraken(pair, tf){
+  const j = await getJSON(`https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=${TF[tf].kr}`);
+  if(j.error&&j.error.length){ const e=new Error(j.error[0]); if(/Unknown asset pair/i.test(j.error[0])) e.status=400; throw e; }
+  const key = Object.keys(j.result).find(k=>k!=='last');
+  return j.result[key].slice(-500).map(k=>({time:shift(+k[0]),open:k[1],high:k[2],low:k[3],close:k[4]}));
+}
+async function fromHyperliquid(coin, tf){
+  const now=Date.now();
+  let j; try{ j = await getJSON('https://api.hyperliquid.xyz/info', 7000, {method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({type:'candleSnapshot',req:{coin,interval:TF[tf].bi,startTime:now-500*TF[tf].ms,endTime:now}})}); }catch(e){ if(e.status===500) e.status=400; throw e; }
+  if(!Array.isArray(j)||!j.length){ const e=new Error('ไม่มีข้อมูล'); e.status=400; throw e; }
+  return j.map(k=>({time:shift(k.t/1000),open:k.o,high:k.h,low:k.l,close:k.c}));
+}
+async function fromBitkub(sym, tf){
+  const to=Math.floor(Date.now()/1000), from=to-500*TF[tf].ms/1000;
+  const j = await getJSON(`https://api.bitkub.com/tradingview/history?symbol=${sym}&resolution=${TF[tf].bk}&from=${from}&to=${to}`);
+  if(j.s!=='ok'||!j.t) throw new Error('ไม่มีข้อมูล');
+  return j.t.map((t,i)=>({time:shift(t),open:j.o[i],high:j.h[i],low:j.l[i],close:j.c[i]}));
+}
+async function fromFrankfurter(fr){
+  const start = new Date(Date.now()-370*864e5).toISOString().slice(0,10);
+  const j = await getJSON(`https://api.frankfurter.dev/v1/${start}..?base=${fr.b}&symbols=${fr.s}`);
+  return Object.entries(j.rates).map(([d,r])=>{ const v=r[fr.s]; return {time:shift(Date.parse(d+'T00:00:00Z')/1000),open:v,high:v,low:v,close:v}; });
+}
+/* Yahoo ไม่อนุญาตให้เรียกตรงจากเบราว์เซอร์ จึงเรียกผ่านตัวกลางสาธารณะ (ไม่ต้องใช้คีย์) ทีละคำขอเพื่อไม่ให้โดนจำกัดความถี่ */
+const enc = encodeURIComponent;
+const chartOf = j=>{ const r=j&&j.chart&&j.chart.result&&j.chart.result[0]; if(!r||!r.timestamp||!r.indicators) throw new Error('รูปแบบข้อมูลไม่ถูกต้อง'); return r; };
+const Y_ROUTES = [
+  async u=>{ const t=await getJSON('https://r.jina.ai/'+u, 9000, {text:true}); const k=t.indexOf('{"chart"'); if(k<0) throw new Error('ไม่มีข้อมูล'); return chartOf(JSON.parse(t.slice(k))); },
+  async u=>chartOf(await getJSON('https://api.allorigins.win/raw?url='+enc(u), 9000)),
+  async u=>chartOf(JSON.parse((await getJSON('https://api.allorigins.win/get?url='+enc(u), 9000)).contents)),
+];
+let yChain = Promise.resolve();
+function fromYahoo(sym, tf){
+  const {yi,yr} = TF[tf];
+  const run = async ()=>{
+    const u = `https://query1.finance.yahoo.com/v8/finance/chart/${enc(sym)}?interval=${yi}&range=${yr}`;
+    let r=null;
+    for(const route of Y_ROUTES){ try{ r=await route(u); break; }catch(e){} }
+    if(!r) throw new Error('ตัวกลางทุกตัวไม่ตอบ');
+    const q=r.indicators.quote[0];
+    return r.timestamp.map((t,i)=>({time:shift(t),open:q.open[i],high:q.high[i],low:q.low[i],close:q.close[i]})).slice(-1500);
+  };
+  const p = yChain.then(run, run);
+  yChain = p.catch(()=>{}).then(()=>new Promise(r=>setTimeout(r,400)));
+  return p;
+}
+/* รายการแหล่งข้อมูลของสินทรัพย์ เรียงตามลำดับที่จะลอง */
+function sources(a){
+  const etf = a.g==='us'||a.g==='world';   // ดัชนีหุ้น: ราคาจาก Binance เป็นราคา ETF ไม่ใช่ค่าดัชนี จึงใช้เป็นตัวสำรองสุดท้าย
+  const B = {
+    bn:()=>(a.bn||[]).map(s=>({k:'bn'+s.f+s.s+(s.h?'th':''), via:`${s.tag||'Binance'} ${s.s}${s.f?' (perp)':''}`, live:s.h?null:s,
+          note:etf?'ราคา ETF ไม่ใช่ค่าดัชนี (แหล่งดัชนีไม่ตอบ)':'', get:tf=>fromBinance(s,tf)})),
+    kr:()=>a.kr?[{k:'kr'+a.kr, via:`Kraken ${a.kr}`, get:tf=>fromKraken(a.kr,tf)}]:[],
+    hl:()=>(a.hl||[]).map(c=>({k:'hl'+c, via:`Hyperliquid ${c}`, unit:etf?'จุด':null, get:tf=>fromHyperliquid(c,tf)})),
+    bk:()=>a.bk?[{k:'bk'+a.bk, via:`Bitkub ${a.bk}`, get:tf=>fromBitkub(a.bk,tf)}]:[],
+    yh:()=>a.yh?[{k:'yh'+a.yh, via:`Yahoo ${a.yh}`, slow:true, unit:/^\^|\.SS$/.test(a.yh)?'จุด':null, get:tf=>fromYahoo(a.yh,tf)}]:[],
+    fr:()=>a.fr?[{k:'fr', via:'ECB (รายวัน)', slow:true, daily:true, get:()=>fromFrankfurter(a.fr)}]:[],
+  };
+  return (a.ord||'bn kr hl bk yh').split(' ').concat('fr').flatMap(k=>B[k]());
+}
+async function loadData(a){
+  const tf=S.tf, notes=[];
+  let list=sources(a).filter(s=>!BAD.has(s.k));
+  const pref=list.find(s=>s.k===PREF[a.id]);
+  if(pref) list=[pref,...list.filter(s=>s!==pref)];
+  for(const s of list){
+    try{
+      const data=normalize(await s.get(tf));
+      if(PREF[a.id]!==s.k && !s.daily && !s.note){ PREF[a.id]=s.k; store.set('mkt-dash-src3',PREF); }
+      return {data, live:s.live||null, via:s.via, slow:!!s.slow, unit:s.unit||a.unit, tf,
+              note:s.daily&&tf!=='1d'?'แหล่งข้อมูลระหว่างวันไม่ตอบ จึงแสดงข้อมูลรายวันแทน':(s.note||'')};
+    }catch(e){
+      if(e.status===400) BAD.add(s.k);
+      notes.push(`${s.via}: ${e.status===400?'ไม่มีสัญลักษณ์นี้':(e.message||'เชื่อมต่อไม่ได้')}`);
+    }
+  }
+  throw new Error(notes.join(' · ')||'ไม่มีแหล่งข้อมูล');
+}
+
+/* ================= อินดิเคเตอร์ ================= */
+function sma(d,n){ const o=[]; let s=0; d.forEach((b,i)=>{ s+=b.close; if(i>=n) s-=d[i-n].close; if(i>=n-1) o.push({time:b.time,value:s/n}); }); return o; }
+function ema(d,n){ const o=[],k=2/(n+1); let e=null; d.forEach((b,i)=>{ if(i<n-1) return; if(e===null){ e=d.slice(0,n).reduce((a,x)=>a+x.close,0)/n; } else e=b.close*k+e*(1-k); o.push({time:b.time,value:e}); }); return o; }
+function rsi(d,n){
+  const o=[]; if(d.length<=n) return o; let g=0,l=0;
+  for(let i=1;i<=n;i++){ const c=d[i].close-d[i-1].close; if(c>=0) g+=c; else l-=c; }
+  g/=n; l/=n;
+  const val=()=> l===0?100:100-100/(1+g/l);
+  o.push({time:d[n].time,value:val()});
+  for(let i=n+1;i<d.length;i++){ const c=d[i].close-d[i-1].close; g=(g*(n-1)+Math.max(c,0))/n; l=(l*(n-1)+Math.max(-c,0))/n; o.push({time:d[i].time,value:val()}); }
+  return o;
+}
+
+/* ================= สร้างกราฟ ================= */
+function chartOpts(){
+  const T=THEME[S.theme];
+  return {autoSize:true,
+    layout:{background:{type:'solid',color:T.bg},textColor:T.text,fontFamily:'IBM Plex Sans Thai, sans-serif'},
+    grid:{vertLines:{color:T.grid},horzLines:{color:T.grid}},
+    crosshair:{mode:LW.CrosshairMode.Normal},
+    rightPriceScale:{borderColor:T.border}, timeScale:{borderColor:T.border,timeVisible:true,secondsVisible:false},
+    handleScroll:true, handleScale:true};
+}
+const pt = b=> (S.type==='line'||S.type==='area') ? {time:b.time,value:b.close} : b;
+function addMain(C,data){
+  let s;
+  if(S.type==='candle') s=C.addSeries(LW.CandlestickSeries,{upColor:UP,downColor:DOWN,borderVisible:false,wickUpColor:UP,wickDownColor:DOWN});
+  else if(S.type==='bar') s=C.addSeries(LW.BarSeries,{upColor:UP,downColor:DOWN});
+  else if(S.type==='line') s=C.addSeries(LW.LineSeries,{color:'#4aa3ff',lineWidth:2});
+  else s=C.addSeries(LW.AreaSeries,{lineColor:'#4aa3ff',topColor:'rgba(74,163,255,.35)',bottomColor:'rgba(74,163,255,.02)',lineWidth:2});
+  s.setData(data.map(pt)); return s;
+}
+const lineOpts = c=>({color:c,lineWidth:2,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
+
+function setIndicators(p,data){
+  if(p.ma)  p.ma.setData(sma(data,S.maN));
+  if(p.ema) p.ema.setData(ema(data,S.emaN));
+  if(p.rsi) p.rsi.setData(rsi(data,S.rsiN));
+}
+function clearSeries(p){
+  [p.main,p.ma,p.ema,p.rsi].forEach(s=>{ if(s) try{p.chart.removeSeries(s);}catch(e){} });
+  p.main=p.ma=p.ema=p.rsi=null; p.built=null;
+}
+/* สร้างซีรีส์ใหม่ทั้งหมด (เมื่อโครงสร้างเปลี่ยน: ชนิดกราฟ/อินดิเคเตอร์/สินทรัพย์/โหลดครั้งแรก) */
+function rebuild(p,data){
+  const C=p.chart;
+  clearSeries(p);
+  p.main=addMain(C,data);
+  if(S.ma)  p.ma =C.addSeries(LW.LineSeries,lineOpts('#f0b429'));
+  if(S.ema) p.ema=C.addSeries(LW.LineSeries,lineOpts('#4aa3ff'));
+  if(S.rsi){
+    p.rsi=C.addSeries(LW.LineSeries,{...lineOpts('#b28dff'),autoscaleInfoProvider:()=>({priceRange:{minValue:0,maxValue:100}})},1);
+    [70,30].forEach(v=>p.rsi.createPriceLine({price:v,color:'#7a828e',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:''}));
+    try{ C.panes()[1].setHeight(Math.max(70,Math.min(120,p.el.clientHeight*.22))); }catch(e){}
+  }
+  setIndicators(p,data);
+  C.timeScale().fitContent();
+  p.built={type:S.type,ma:S.ma,ema:S.ema,rsi:S.rsi,id:p.id,tf:S.tf};
+}
+const needRebuild = p=>!p.main || !p.built || p.built.id!==p.id || p.built.tf!==S.tf || p.built.type!==S.type || p.built.ma!==S.ma || p.built.ema!==S.ema || p.built.rsi!==S.rsi;
+
+const ICON = {
+  refresh:'<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 4v7h-7"/></svg>',
+  fit:'<svg viewBox="0 0 24 24"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>',
+  png:'<svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>',
+  expand:'<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  shrink:'<svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
+};
+const TOOLS = all=>`<span class="tools">
+  <button data-act="refresh" title="${all?'อัปเดตทั้งหมด':'อัปเดตกราฟนี้'}" aria-label="อัปเดต">${ICON.refresh}</button>
+  <button data-act="fit" title="รีเซ็ตซูม" aria-label="รีเซ็ตซูม">${ICON.fit}</button>
+  <button data-act="png" title="ดาวน์โหลดกราฟนี้เป็น PNG" aria-label="ดาวน์โหลด PNG">${ICON.png}<span>PNG</span></button>
+  <button data-act="fs" title="ขยายเต็มจอ" aria-label="ขยายเต็มจอ">${ICON.expand}<span>ขยาย</span></button></span>`;
+const ASSET_OPTS = Object.entries(GROUPS).map(([g,label])=>
+  `<optgroup label="${label}">${CAT.filter(a=>a.g===g).map(a=>`<option value="${a.id}">${a.name.replace(/&/g,'&amp;')}</option>`).join('')}</optgroup>`).join('');
+
+function buildPanel(i){
+  const id=S.slots[i], el=document.createElement('section'); el.className='panel';
+  el.innerHTML=`<div class="ph"><select class="asset" aria-label="เลือกสินทรัพย์ของช่องนี้">${ASSET_OPTS}</select><span class="sym"></span>
+    <span class="price">–</span><span class="chg"></span>${TOOLS(false)}</div>
+    <div class="chart"><div class="status">กำลังโหลด…</div></div>`;
+  $('#grid').appendChild(el);
+  const chart=LW.createChart(el.querySelector('.chart'),chartOpts());
+  const p={i,id,a:BY[id],el,chart,main:null,ma:null,ema:null,rsi:null,built:null};
+  P.push(p);
+  const sel=el.querySelector('select.asset'); sel.value=id;
+  sel.onchange=()=>setSlot(p,sel.value);
+  el.addEventListener('click',e=>{
+    const b=e.target.closest('[data-act]'); if(!b) return;
+    const act=b.dataset.act;
+    if(act==='refresh') refresh(p.id);
+    if(act==='fit') chart.timeScale().fitContent();
+    if(act==='png') download(tile(...pngItem(p)), `${p.id}-${S.tf}`);
+    if(act==='fs') toggleFS(el);
+  });
+}
+/* เปลี่ยนสินทรัพย์ของช่องโดยไม่สร้างแผงใหม่ (ใช้ได้แม้ขณะขยายเต็มจอ) */
+function setSlot(p,id){
+  S.slots[p.i]=id; save();
+  clearSeries(p); p.id=id; p.a=BY[id];
+  p.el.querySelector('.price').textContent='–'; p.el.querySelector('.chg').textContent=''; p.el.querySelector('.sym').textContent='';
+  if(DATA[id]||ERR[id]) paint(id); else { setStatus(p.el,'กำลังโหลด…'); refresh(id); }
+  syncSockets();
+}
+function setStatus(el,html,err){ const s=el.querySelector('.status'); s.innerHTML=html; s.classList.toggle('err',!!err); }
+
+function header(p){
+  const d=DATA[p.id]; if(!d) return;
+  const last=d.data.at(-1), first=d.data[0], diff=last.close-first.open, pct=diff/first.open*100;
+  p.el.querySelector('.price').textContent=fmt(last.close);
+  const c=p.el.querySelector('.chg'); c.textContent=`${diff>=0?'+':''}${pct.toFixed(2)}%`; c.className='chg '+(diff>=0?'up':'down');
+  c.title='เปลี่ยนแปลงตลอดช่วงที่โหลด';
+  const s=p.el.querySelector('.sym'); s.textContent=d.via; s.title='แหล่งข้อมูล: '+d.via;
+}
+
+/* ================= ขยายเต็มจอ / ย่อกลับ ================= */
+const fsEl = ()=>document.fullscreenElement||document.webkitFullscreenElement||null;
+function toggleFS(el){
+  if(fsEl()===el){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); return; }
+  if(el.classList.contains('max')){ el.classList.remove('max'); syncFS(); return; }
+  const req=el.requestFullscreen||el.webkitRequestFullscreen;
+  const fallback=()=>{ el.classList.add('max'); syncFS(); };   // เบราว์เซอร์ที่ไม่อนุญาต Fullscreen API: ขยายเต็มหน้าต่างแทน
+  if(!req) return fallback();
+  try{ const r=req.call(el); if(r&&r.catch) r.catch(fallback); }catch(e){ fallback(); }
+}
+function syncFS(){
+  document.querySelectorAll('.panel').forEach(el=>{
+    const on = fsEl()===el || el.classList.contains('max');
+    const b=el.querySelector('[data-act=fs]'); if(!b) return;
+    if((el.dataset.fs==='1')!==on){ el.dataset.fs=on?'1':'0'; setTimeout(()=>refit(el),120); }   // ขนาดเปลี่ยน: จัดกราฟให้พอดีใหม่
+    b.innerHTML=(on?ICON.shrink:ICON.expand)+`<span>${on?'ย่อกลับ':'ขยาย'}</span>`;
+    b.title=on?'ย่อกลับขนาดเดิม (Esc)':'ขยายเต็มจอ'; b.setAttribute('aria-label',b.title);
+  });
+  $('#pageFS').textContent = fsEl()===document.documentElement ? 'ออกจากเต็มจอ' : 'เต็มจอ';
+}
+function refit(el){
+  const p=P.find(x=>x.el===el)||(CMP&&CMP.el===el?CMP:null); if(!p) return;
+  try{ if(p.rsi) p.chart.panes()[1].setHeight(Math.max(70,Math.min(220,el.clientHeight*.22))); }catch(e){}
+  p.chart.timeScale().fitContent();
+}
+document.addEventListener('fullscreenchange',syncFS);
+document.addEventListener('webkitfullscreenchange',syncFS);
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  const m=document.querySelector('.panel.max'); if(m){ m.classList.remove('max'); syncFS(); }
+  document.querySelectorAll('details.dd[open]').forEach(d=>d.open=false);
+});
+
+/* ================= โหมดเทียบ % ================= */
+function buildCompare(){
+  const el=document.createElement('section'); el.className='panel';
+  el.innerHTML=`<div class="ph"><span class="name">เทียบการเปลี่ยนแปลง %</span>
+    <details class="dd"><summary>เลือกสินทรัพย์ (${S.cmp.length})</summary><div class="menu left" id="cmpMenu">${
+      Object.entries(GROUPS).map(([g,label])=>`<h4>${label}</h4><div class="cgrid">${CAT.filter(a=>a.g===g).map(a=>
+        `<label class="ind"><input type="checkbox" value="${a.id}" ${S.cmp.includes(a.id)?'checked':''}><i style="width:9px;height:9px;border-radius:2px;background:${COLOR[a.id]}"></i>${a.short}</label>`).join('')}</div>`).join('')
+    }</div></details>
+    <span class="sym">เริ่มที่ 0% ณ ต้นช่วงที่เห็นบนจอ</span>
+    <span style="margin-left:auto"></span>${TOOLS(true)}</div>
+    <div class="chart"><div class="legend"></div><div class="status"></div></div>`;
+  $('#grid').appendChild(el);
+  const chart=LW.createChart(el.querySelector('.chart'),chartOpts());
+  chart.priceScale('right').applyOptions({mode:LW.PriceScaleMode.Percentage});
+  CMP={el,chart,series:{}};
+  activeIds().forEach(addCmpSeries);
+  chart.timeScale().subscribeVisibleTimeRangeChange(legend);
+  el.querySelector('#cmpMenu').addEventListener('change',e=>{
+    const id=e.target.value; if(!BY[id]) return;
+    if(e.target.checked){ if(!S.cmp.includes(id)) S.cmp.push(id); addCmpSeries(id); if(DATA[id]||ERR[id]) paint(id); else refresh(id); }
+    else{ S.cmp=S.cmp.filter(x=>x!==id); if(CMP.series[id]){ chart.removeSeries(CMP.series[id]); delete CMP.series[id]; } legend(); cmpStatus(); }
+    el.querySelector('details.dd>summary').textContent=`เลือกสินทรัพย์ (${S.cmp.length})`;
+    save(); syncSockets();
+  });
+  el.addEventListener('click',e=>{
+    const b=e.target.closest('[data-act]'); if(!b) return;
+    const act=b.dataset.act;
+    if(act==='refresh') refreshAll();
+    if(act==='fit') chart.timeScale().fitContent();
+    if(act==='png') download(tile(chart,'เทียบการเปลี่ยนแปลง % · '+S.tf,legendText()),`compare-${S.tf}`);
+    if(act==='fs') toggleFS(el);
+  });
+  cmpStatus();
+}
+function addCmpSeries(id){
+  if(!CMP||CMP.series[id]) return;
+  CMP.series[id]=CMP.chart.addSeries(LW.LineSeries,{color:COLOR[id],lineWidth:2,title:BY[id].short,priceLineVisible:false});
+}
+function visibleStats(){
+  const rng=CMP.chart.timeScale().getVisibleRange(), out=[];
+  activeIds().forEach(id=>{
+    const d=DATA[id]; if(!d) return;
+    let arr=d.data; if(rng) arr=arr.filter(b=>b.time>=rng.from&&b.time<=rng.to);
+    if(arr.length<2) return;
+    out.push({id,pct:(arr.at(-1).close/arr[0].close-1)*100});
+  });
+  return out.sort((a,b)=>b.pct-a.pct);
+}
+function legend(){
+  if(!CMP) return;
+  CMP.el.querySelector('.legend').innerHTML = visibleStats().map(r=>
+    `<div><i style="background:${COLOR[r.id]}"></i>${BY[r.id].short}<span class="v ${r.pct>=0?'up':'down'}">${r.pct>=0?'+':''}${r.pct.toFixed(2)}%</span></div>`).join('');
+}
+const legendText = ()=> CMP?visibleStats().map(r=>`${BY[r.id].short} ${r.pct>=0?'+':''}${r.pct.toFixed(2)}%`).join('  ·  '):'';
+function cmpStatus(){
+  if(!CMP) return;
+  const ids=activeIds();
+  const errs=ids.filter(id=>ERR[id]&&!DATA[id]).map(id=>BY[id].short);
+  const wait=ids.filter(id=>!DATA[id]&&!ERR[id]).length;
+  setStatus(CMP.el, !ids.length?'เลือกสินทรัพย์จากเมนูด้านบนเพื่อเริ่มเทียบ'
+    : errs.length?`โหลดไม่ได้: ${errs.join(', ')} (ดูรายละเอียดในโหมดแยกกราฟ)`
+    : wait?'กำลังโหลด…':`<span class="live"></span>อัปเดต ${new Date().toLocaleTimeString('th-TH')}`, !!errs.length);
+}
+
+/* ================= โหลด / วาด ================= */
+function refresh(id){
+  if(LOADING[id]) return LOADING[id];
+  const a=BY[id], tf=S.tf;
+  if(!DATA[id]) P.filter(p=>p.id===id).forEach(p=>setStatus(p.el,'กำลังโหลด…'));
+  return LOADING[id]=(async()=>{
+    let r=null, err=null;
+    try{ r=await loadData(a); }catch(e){ err=e; }
+    delete LOADING[id];
+    if(tf!==S.tf) return;                       // กรอบเวลาถูกเปลี่ยนระหว่างโหลด: ทิ้งผลนี้
+    if(r){ r.at=Date.now(); DATA[id]=r; delete ERR[id]; }
+    else ERR[id]={msg:err.message,at:Date.now()};
+    paint(id); syncSockets();
+  })();
+}
+const refreshAll = ()=>Promise.all(activeIds().map(refresh));
+
+function paint(id){
+  const d=DATA[id];
+  if(S.mode==='cmp'){
+    if(!CMP||!CMP.series[id]) return;
+    if(d){ CMP.series[id].setData(d.data.map(b=>({time:b.time,value:b.close}))); if(!CMP.fitted){CMP.chart.timeScale().fitContent();CMP.fitted=true;} }
+    legend(); cmpStatus(); return;
+  }
+  P.filter(p=>p.id===id).forEach(p=>{
+    try{
+      if(!d){ setStatus(p.el, ERR[id]?('โหลดไม่สำเร็จ: '+ERR[id].msg+' — จะลองใหม่อัตโนมัติ'):'กำลังโหลด…', !!ERR[id]); return; }
+      if(needRebuild(p)) rebuild(p,d.data);
+      else { p.main.setData(d.data.map(pt)); setIndicators(p,d.data); }
+      header(p);
+      const ageMin=(Date.now()/1000-(d.data.at(-1).time+new Date().getTimezoneOffset()*60))/60;
+      const stale=!d.live && ageMin>(S.tf==='1d'?60*72:90);
+      const t=new Date(d.at).toLocaleTimeString('th-TH');
+      setStatus(p.el, d.live?`<span class="live"></span>${d.note?d.note+' · ':''}สด · ${t}`
+                    : `${d.note?d.note+' · ':stale?'ตลาดอาจปิดอยู่ · ':''}อัปเดต ${t}`);
+    }catch(e){ setStatus(p.el,'วาดกราฟไม่สำเร็จ: '+e.message,true); }
+  });
+}
+
+/* ================= WebSocket (Binance) ================= */
+const wsKey = id=>{ const d=DATA[id]; return d&&d.live?`${d.live.f}${d.live.s}${S.tf}`:''; };
+function syncSockets(){
+  const ids=activeIds();
+  Object.keys(WS).forEach(id=>{
+    const d=DATA[id];
+    if(!ids.includes(id)||!d||!d.live||WS[id].key!==wsKey(id)) closeSocket(id);
+  });
+  ids.forEach(id=>{ const d=DATA[id]; if(d&&d.live&&!WS[id]) openSocket(id); });
+}
+function closeSocket(id){ const w=WS[id]; if(!w) return; w.dead=true; try{w.ws.close();}catch(e){} delete WS[id]; }
+function openSocket(id){
+  const d=DATA[id]; if(!d||!d.live) return;
+  const key=wsKey(id), rec={key,dead:false};
+  try{
+    const ws=new WebSocket(`${WSS[d.live.f]}${d.live.s.toLowerCase()}@kline_${TF[S.tf].bi}`);
+    ws.onmessage=ev=>{
+      let k; try{ k=JSON.parse(ev.data).k; }catch(e){ return; } if(!k) return;
+      onTick(id,{time:shift(k.t/1000),open:+k.o,high:+k.h,low:+k.l,close:+k.c});
+    };
+    ws.onclose=()=>{ if(!rec.dead&&WS[id]===rec){ delete WS[id]; setTimeout(()=>{ if(activeIds().includes(id)&&!WS[id]) openSocket(id); },5000); } };
+    rec.ws=ws; WS[id]=rec;
+  }catch(e){}
+}
+function onTick(id,bar){
+  const d=DATA[id]; if(!d) return;
+  const last=d.data.at(-1); if(bar.time<last.time) return;
+  if(bar.time===last.time) d.data[d.data.length-1]=bar; else d.data.push(bar);
+  try{
+    if(S.mode==='cmp'){ CMP&&CMP.series[id]&&CMP.series[id].update({time:bar.time,value:bar.close}); legend(); return; }
+    P.filter(p=>p.id===id&&p.main&&!needRebuild(p)).forEach(p=>{ p.main.update(pt(bar)); setIndicators(p,d.data); header(p); });
+  }catch(e){}
+}
+
+/* ================= ดาวน์โหลด PNG ================= */
+const pngItem = p=>[p.chart, `${p.a.name} · ${S.tf}`, DATA[p.id]?`${fmt(DATA[p.id].data.at(-1).close)} ${DATA[p.id].unit} · ${DATA[p.id].via}`:''];
+/* ภาพกราฟ 1 ใบ พร้อมหัวเรื่อง */
+function tile(chart,title,sub){
+  const T=THEME[S.theme], shot=chart.takeScreenshot(), k=window.devicePixelRatio||1, H=Math.round(62*k), c=document.createElement('canvas');
+  c.width=shot.width; c.height=shot.height+H;
+  const g=c.getContext('2d'); g.fillStyle=T.bg; g.fillRect(0,0,c.width,c.height);
+  g.fillStyle=T.ink; g.font=`600 ${22*k}px "IBM Plex Sans Thai",sans-serif`; g.fillText(title,16*k,30*k,c.width-32*k);
+  g.fillStyle=T.text; g.font=`${14*k}px "IBM Plex Sans Thai",sans-serif`; g.fillText(sub||'',16*k,52*k,c.width-32*k);
+  g.drawImage(shot,0,H);
+  return c;
+}
+function download(canvas,name){
+  canvas.toBlob(b=>{
+    const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+    a.download=`${name}-${new Date().toISOString().slice(0,16).replace(/[:T-]/g,'')}.png`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  },'image/png');
+}
+const pngItems = ()=> S.mode==='cmp'&&CMP ? [{name:'compare',args:[CMP.chart,'เทียบการเปลี่ยนแปลง % · '+S.tf,legendText()]}]
+                                          : P.map(p=>({name:p.id,args:pngItem(p)}));
+/* รวมทุกกราฟบนจอเป็นภาพเดียว จัดเรียงตามเลย์เอาต์ที่เลือก */
+function combinedPNG(){
+  const tiles=pngItems().map(it=>tile(...it.args)); if(!tiles.length) return;
+  const T=THEME[S.theme], k=window.devicePixelRatio||1, gap=Math.round(10*k), head=Math.round(50*k);
+  const cols=Math.min(tiles.length, S.mode==='cmp'?1:COLS[S.layout]), rows=Math.ceil(tiles.length/cols);
+  const cw=Math.max(...tiles.map(t=>t.width)), ch=Math.max(...tiles.map(t=>t.height));
+  const c=document.createElement('canvas'); c.width=cols*cw+(cols+1)*gap; c.height=head+rows*ch+rows*gap;
+  const g=c.getContext('2d'); g.fillStyle=T.page; g.fillRect(0,0,c.width,c.height);
+  g.fillStyle=T.ink; g.font=`600 ${20*k}px "IBM Plex Sans Thai",sans-serif`; g.textBaseline='middle';
+  g.fillText(`${TITLE} · ${S.tf} · ${new Date().toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'})}`,gap+4*k,head/2,c.width-2*gap);
+  tiles.forEach((t,i)=>g.drawImage(t, gap+(i%cols)*(cw+gap), head+Math.floor(i/cols)*(ch+gap)));
+  download(c,`dashboard-${S.mode==='cmp'?'compare':S.layout+'charts'}-${S.tf}`);
+}
+
+/* ================= เรนเดอร์หน้า ================= */
+function disposeAll(){
+  P.forEach(p=>p.chart.remove()); P=[];
+  if(CMP){ CMP.chart.remove(); CMP=null; }
+  $('#grid').innerHTML='';
+}
+function render(){
+  disposeAll();
+  $('#grid').className = S.mode==='cmp' ? 'n1' : 'n'+S.layout;
+  if(S.mode==='cmp') buildCompare(); else for(let i=0;i<S.layout;i++) buildPanel(i);
+  activeIds().forEach(id=>{ if(DATA[id]||ERR[id]) paint(id); else refresh(id); });
+  syncSockets(); syncFS();
+}
+function syncControls(){
+  document.documentElement.dataset.theme=S.theme;
+  $('#type').value=S.type; $('#theme').value=S.theme;
+  ['ma','ema','rsi'].forEach(k=>{ $('#'+k).checked=S[k]; $('#'+k+'N').value=S[k+'N']; });
+  $('#auto').checked=S.auto;
+  document.querySelectorAll('#tfSeg button').forEach(b=>b.classList.toggle('on',b.dataset.tf===S.tf));
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
+  document.querySelectorAll('#laySeg button').forEach(b=>{ b.classList.toggle('on',S.mode==='split'&&+b.dataset.n===S.layout); b.setAttribute('aria-pressed',S.mode==='split'&&+b.dataset.n===S.layout); });
+}
+const repaintAll = ()=>activeIds().forEach(paint);
+
+document.querySelectorAll('#laySeg button').forEach(b=>b.onclick=()=>{ S.layout=+b.dataset.n; S.mode='split'; save(); syncControls(); render(); });
+document.querySelectorAll('#tfSeg button').forEach(b=>b.onclick=()=>{
+  if(S.tf===b.dataset.tf) return;
+  S.tf=b.dataset.tf; save();
+  Object.keys(DATA).forEach(k=>delete DATA[k]); Object.keys(ERR).forEach(k=>delete ERR[k]); Object.keys(LOADING).forEach(k=>delete LOADING[k]);
+  Object.keys(WS).forEach(closeSocket); syncControls(); render();
+});
+document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{ S.mode=b.dataset.mode; save(); syncControls(); render(); });
+$('#type').onchange=e=>{ S.type=e.target.value; save(); repaintAll(); };
+$('#theme').onchange=e=>{
+  S.theme=e.target.value; save(); syncControls(); const T=THEME[S.theme];
+  [...P,CMP].filter(Boolean).forEach(p=>p.chart.applyOptions({
+    layout:{background:{type:'solid',color:T.bg},textColor:T.text},grid:{vertLines:{color:T.grid},horzLines:{color:T.grid}},
+    rightPriceScale:{borderColor:T.border},timeScale:{borderColor:T.border}}));
+};
+['ma','ema','rsi'].forEach(k=>{
+  $('#'+k).onchange=e=>{ S[k]=e.target.checked; save(); repaintAll(); };
+  $('#'+k+'N').onchange=e=>{ S[k+'N']=Math.max(2,Math.round(+e.target.value)||DEF[k+'N']); e.target.value=S[k+'N']; save(); repaintAll(); };
+});
+$('#auto').onchange=e=>{ S.auto=e.target.checked; save(); };
+$('#refreshAll').onclick=()=>{ BAD.clear(); refreshAll(); };
+$('#pageFS').onclick=()=>{
+  const root=document.documentElement;
+  if(fsEl()){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); return; }
+  const req=root.requestFullscreen||root.webkitRequestFullscreen;
+  if(req) try{ const r=req.call(root); r&&r.catch&&r.catch(()=>{}); }catch(e){}
+};
+const closeMenus = except=>document.querySelectorAll('details.dd[open]').forEach(d=>{ if(d!==except) d.open=false; });
+$('#pngOne').onclick=()=>{ closeMenus(); combinedPNG(); };
+$('#pngEach').onclick=async()=>{
+  closeMenus();
+  for(const it of pngItems()){ download(tile(...it.args),`${it.name}-${S.tf}`); await new Promise(r=>setTimeout(r,450)); }
+};
+/* เมนูพับเก็บ: เปิดได้ทีละเมนู และปิดเมื่อคลิกนอกเมนู */
+document.addEventListener('click',e=>{ const inside=e.target.closest('details.dd'); closeMenus(inside); });
+
+/* อัปเดตอัตโนมัติ: เฉพาะตัวที่ไม่ได้รับราคาสดผ่าน WebSocket · ตัวที่โหลดไม่สำเร็จจะลองใหม่ทุก 45 วินาที */
+setInterval(()=>{
+  if(!S.auto||document.hidden) return;
+  activeIds().forEach(id=>{
+    const d=DATA[id], e=ERR[id];
+    if(d){ if(!d.live && Date.now()-d.at>(d.slow?90000:20000)) refresh(id); }
+    else if(!e || Date.now()-e.at>45000) refresh(id);
+  });
+},10000);
+
+if(!LW){ $('#grid').innerHTML='<p class="lbl">โหลดไลบรารีกราฟไม่สำเร็จ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรชหน้า</p>'; }
+else { syncControls(); render(); }
+</script>
+</body>
+</html>
